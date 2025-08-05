@@ -39,21 +39,14 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # This dictionary maps full dungeon names to a list of their common abbreviations or shorthand names
 dungeon_aliases = {
     "Ara-Kara, City of Echoes": ["ara", "city of echoes", "coe"],
-    "City of Threads": ["threads", "city of threads", "cot"],
-    "The Stonevault": ["stonevault", "vault"],
     "The Dawnbreaker": ["dawnbreaker", "breaker"],
-    "Mists of Tirna Scithe": ["mists", "tirna", "scithe", "mots"],
-    "The Necrotic Wake": ["nw", "necrotic wake", "necrotic"],
-    "Siege of Boralus": ["siege", "boralus", "sob"],
-    "Grim Batol": ["grim", "batol", "gb"],
     "Operation: Floodgate": ["flood", "floodgate", "of"],
-    "Cinderbrew Meadery": ["cinder", "meadery", "brew", "cm"],
-    "Darkflame Cleft": ["dark", "flame", "cleft", "dc"],
-    "The Rookery": ["rook", "rookery"],
     "Priory of the Sacred Flame": ["priory", "sacred", "flame", "psf"],
-    "The MOTHERLODE!!": ["ml", "mother", "motherlode"],
-    "Theater of Pain": ["top", "theater", "pain", "tp"],
-    "Operation: Mechagon: Workshop": ["workshop", "mech", "omw"]
+    "Eco-Dome Al'dani": ["eco", "eco-dome", "dome"],
+    "Halls of Atonement": ["hoa", "halls of atonement", "halls"],
+    "Tazavesh the Veiled Market, Streets of Wonder": ["sow", "streets of wonder", "streets"],
+    "Tazavesh the Veiled Market, So'leah's Gambit": ["sol", "gambit", "sg"]
+    
 }
 
 # Convert to a more efficient structure using sets for O(1) lookup

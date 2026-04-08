@@ -12,10 +12,6 @@
 
 [View Full Changelog](CHANGELOG.md)
 
-## Invite MythicMate to Your Server
-
-Click [here](https://discord.com/oauth2/authorize?client_id=1271394615119056918&permissions=268789824&integration_type=0&scope=bot) to invite MythicMate to your Discord server.
-
 ## Features
 
 ### Group Formation

@@ -41,10 +41,10 @@ dungeon_aliases = {
     "Pit of Saron":["pos", "pit", "saron"],
     "Skyreach":["sky", "sr", "s"],
     "Seat of the Triumvirate":["seat", "sot"],
-    "Algethar Academy":["aa", "algethar"],
-    "Magister's Terrace":["mt", "magisters terrace", "magister", "magisters"],
+    "Algeth'ar Academy":["aa", "algethar", "academy", "algethar academy"],
+    "Magisters' Terrace":["mt", "magisters terrace", "magister", "magisters"],
     "Maisara Caverns":["mc", "masiara", "cavern", "caverns", "maisara cavern", "trolls"],
-    "Nexus-Point: Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint: penas"],
+    "Nexus-Point Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint penas"],
     "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"]
 }
 

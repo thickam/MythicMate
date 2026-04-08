@@ -32,7 +32,7 @@ Users agree to:
 
 ## Contact
 For questions about these policies, contact:
-Discord: thisisbeel
+Discord: sam.tim
 
 ## Termination
 We reserve the right to terminate service to any user who violates these terms.

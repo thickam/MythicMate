@@ -138,4 +138,4 @@ This project is licensed under the MIT License. See the [LICENSE](LICENSE) file 
 
 ## Contact
 For questions or suggestions:
-- Discord: thisisbeel
+- Discord: sam.tim

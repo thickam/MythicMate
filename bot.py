@@ -24,7 +24,7 @@ intents = discord.Intents.default()
 intents.reactions = True
 intents.guilds = True
 intents.guild_messages = True
-intents.message_content = False
+intents.message_content = True
 
 print("Intents configured:")
 print(f"- Reactions: {intents.reactions}")

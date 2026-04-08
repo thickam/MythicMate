@@ -101,15 +101,28 @@ View server leaderboards for different categories.
    pip install -r requirements.txt
    ```
 
-4. **Run the Bot:**
+4. **Create SQLite Schema**
+
+   Tables and their columns:
+   - servers
+      - server_id
+      - server_name
+
+   - runs
+      - server_id, 
+      - dungeon_name, 
+      - key_level, 
+      - completion_time
+
+   - participants
+      - run_id
+      - server_id
+      - user_id
+      - role
+
+5. **Run the Bot:**
    ```bash
    python bot.py
-   ```
-
-### Docker Deployment (Optional)
-1. **Build and Run:**
-   ```bash
-   docker-compose up -d
    ```
 
 ## Required Permissions

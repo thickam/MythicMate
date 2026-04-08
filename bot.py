@@ -38,15 +38,14 @@ bot = commands.Bot(command_prefix='!', intents=intents)
 # Define the available dungeons and their abbreviations
 # This dictionary maps full dungeon names to a list of their common abbreviations or shorthand names
 dungeon_aliases = {
-    "Ara-Kara, City of Echoes": ["ara", "city of echoes", "coe"],
-    "The Dawnbreaker": ["dawnbreaker", "breaker"],
-    "Operation: Floodgate": ["flood", "floodgate", "of"],
-    "Priory of the Sacred Flame": ["priory", "sacred", "flame", "psf"],
-    "Eco-Dome Al'dani": ["eco", "eco-dome", "dome"],
-    "Halls of Atonement": ["hoa", "halls of atonement", "halls"],
-    "Tazavesh the Veiled Market, Streets of Wonder": ["sow", "streets of wonder", "streets"],
-    "Tazavesh the Veiled Market, So'leah's Gambit": ["sol", "gambit", "sg"]
-    
+    "Pit of Saron":["pos", "pit", "saron"],
+    "Skyreach":["sky", "sr", "s"],
+    "Seat of the Triumvirate":["seat", "sot"],
+    "Algethar Academy":["aa", "algethar"],
+    "Magister's Terrace":["mt", "magisters terrace", "magister", "magisters"],
+    "Maisara Caverns":["mc", "masiara", "cavern", "caverns", "maisara cavern", "trolls"],
+    "Nexus-Point: Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint: penas"],
+    "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"]
 }
 
 # Convert to a more efficient structure using sets for O(1) lookup

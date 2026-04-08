@@ -14,7 +14,7 @@ load_dotenv()
 
 # Get the bot token from environment variables
 TOKEN = os.getenv('BOT_TOKEN')
-
+DB_ADDR = os.getenv('DB_ADDR')
 # At the start, after load_dotenv()
 print(f"Token loaded from environment: {'Yes' if TOKEN else 'No'}")
 print(f"Token length: {len(TOKEN) if TOKEN else 0}")
@@ -498,7 +498,7 @@ def create_connection():
     try:
         # Ensure data directory exists
         os.makedirs('data', exist_ok=True)
-        conn = sqlite3.connect('data/mythicmate.db')
+        conn = sqlite3.connect(DB_ADDR)
         return conn
     except Error as e:
         print(f"Error connecting to database: {e}")

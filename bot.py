@@ -3,7 +3,7 @@ from discord.ext import commands
 from discord import app_commands
 import os
 from dotenv import load_dotenv
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 import asyncio
 import pytz
 from sqlite3 import Error
@@ -153,9 +153,10 @@ async def update_group_embed(message, embed, group_state):
     dungeon="Enter the dungeon name or abbreviation",
     key_level="Enter the key level (e.g., +10)",
     role="Select your role in the group: Tank, Healer, or DPS",
-    schedule="When to run (e.g., 'now' or 'YYYY-MM-DD HH:MM' in server time)"
+    in_hours="Hours until this run will take place",
+    in_minutes="Minutes until this run will take place"
 )
-async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, role: str, schedule: str):
+async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, role: str, in_hours: str = '0', in_minutes: str = '0'):
     print(f"LFM command received from {interaction.user}")
     print("Starting LFM command...")
     
@@ -175,31 +176,27 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
             ephemeral=True
         )
         return
+    hours_mins_valid = in_hours.isdigit() and in_minutes.isdigit()
+    inHours = int(in_hours)
+    inMinutes = int(in_minutes)
+    hours_mins_valid = hours_mins_valid and inHours >= 0 and inMinutes >= 0
+    if not hours_mins_valid:
+        await interaction.response.send_message(
+            f"Sorry, inMinutes and inHours must both be numbers 0 or greater. Please try again with a valid time offset.",
+            ephemeral=True
+        )
+        return
 
     # Handle scheduling
     schedule_time = None
-    if schedule.lower() != "now":
-        try:
-            schedule_time = datetime.strptime(schedule, "%Y-%m-%d %H:%M")
-            schedule_time = pytz.UTC.localize(schedule_time)
-            
-            # Ensure scheduled time is in the future
-            if schedule_time <= datetime.now(pytz.UTC):
-                await interaction.response.send_message(
-                    "The scheduled time must be in the future.",
-                    ephemeral=True
-                )
-                return
-        except ValueError:
-            await interaction.response.send_message(
-                "Invalid date/time format. Please use 'now' or 'YYYY-MM-DD HH:MM'.",
-                ephemeral=True
-            )
-            return
-
-    # Format schedule string and send initial response
-    schedule_str = "now" if not schedule_time else schedule_time.strftime("%Y-%m-%d %H:%M")
-    await interaction.response.defer()
+    schedule_time_str = None
+    if inHours != 0 or inMinutes != 0:
+        schedule_time = (datetime.now(timezone.utc) + timedelta(hours=inHours, minutes=inMinutes)).replace(second=0, microsecond=0)
+        
+        timestamp_int = round(schedule_time.timestamp())
+        schedule_str = f"<t:{timestamp_int}:f> (<t:{timestamp_int}:R>)"
+    else:
+        schedule_str = "now"
 
     # Initialize group state and create embed
     group_state = GroupState(interaction, full_role_name, schedule_time)
@@ -212,7 +209,9 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     embed.set_thumbnail(url="https://example.com/path/to/your/image.png")
 
     # Create and store group message - Changed to use channel.send instead of interaction.followup
-    group_message = await interaction.channel.send(embed=embed)
+    callback = await interaction.response.send_message(embed=embed)
+    
+    group_message = callback.resource
     active_groups[group_message.id] = {
         "state": group_state,
         "embed": embed,

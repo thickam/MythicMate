@@ -554,15 +554,15 @@ async def mystats(interaction: discord.Interaction):
         )
 
         await interaction.channel.send(embed=embed)
-        # ... rest of embed creation ...
 
     except Error as e:
         await interaction.response.send_message(f"Error retrieving statistics: {e}", ephemeral=True)
     finally:
         conn.close()
 
-@bot.tree.command(name="leaderboard", description="View M+ leaderboards")
-@app_commands.guild_only()
+# TODO: Leaderboard
+# @bot.tree.command(name="leaderboard", description="View M+ leaderboards")
+# @app_commands.guild_only()
 async def leaderboard(interaction: discord.Interaction, category: str, timeframe: str):
     conn = create_connection()
     if conn is None:
@@ -578,7 +578,8 @@ async def leaderboard(interaction: discord.Interaction, category: str, timeframe
             time_constraint = "AND r.completion_time >= date('now', 'start of month')"
         elif timeframe == "week":
             time_constraint = "AND r.completion_time >= date('now', '-6 days')"
-        
+
+        query = None
         if category == "runs":
             query = f'''
                 SELECT p.user_id, COUNT(*) as run_count 
@@ -602,17 +603,24 @@ async def leaderboard(interaction: discord.Interaction, category: str, timeframe
                 LIMIT 10
             '''
         
-        c.execute(query, (str(interaction.guild_id),))
-        results = c.fetchall()
-        
-        # Create leaderboard embed
-        embed = discord.Embed(
-            title=f"M+ Leaderboard - {category.title()}",
-            description=f"Server: {interaction.guild.name}\nTimeframe: {timeframe.title()}",
-            color=discord.Color.gold()
-        )
-        
-        # ... rest of embed creation ...
+        embed = None
+        if query is not None:
+            c.execute(query, (str(interaction.guild_id),))
+            results = c.fetchall()
+            
+            # Create leaderboard embed
+            embed = discord.Embed(
+                title=f"M+ Leaderboard - {category.title()}",
+                description=f"Server: {interaction.guild.name}\nTimeframe: {timeframe.title()}",
+                color=discord.Color.gold()
+            )
+        else:
+            embed = discord.Embed(
+                title=f"M+ Leaderboard - {category.title()}",
+                description=f"Server: {interaction.guild.name}\nTimeframe: {timeframe.title()}",
+                color=discord.Color.gold()
+            )
+        await interaction.channel.send(embed=embed)
 
     except Error as e:
         await interaction.response.send_message(f"Error retrieving leaderboard: {e}", ephemeral=True)

@@ -6,15 +6,14 @@ from dotenv import load_dotenv
 from datetime import datetime, timedelta
 import asyncio
 import pytz
-import sqlite3
 from sqlite3 import Error
+import db_schema
 
 # Load environment variables from .env file
 load_dotenv()
 
 # Get the bot token from environment variables
 TOKEN = os.getenv('BOT_TOKEN')
-DB_ADDR = os.getenv('DB_ADDR')
 # At the start, after load_dotenv()
 print(f"Token loaded from environment: {'Yes' if TOKEN else 'No'}")
 print(f"Token length: {len(TOKEN) if TOKEN else 0}")
@@ -70,7 +69,9 @@ role_emojis = {
 async def on_ready():
     print(f'Bot is ready! Logged in as {bot.user}')
     try:
-        synced = await bot.tree.sync()  # Synchronize the command tree with Discord
+        sync_routine = bot.tree.sync() # Synchronize the command tree with Discord
+        db_schema.initialize_schema_if_missing()
+        synced = await sync_routine  
         print(f"Synced {len(synced)} commands.")
     except Exception as e:
         print(f"Error syncing commands: {e}")
@@ -495,9 +496,7 @@ class GroupState:
 
 def create_connection():
     try:
-        # Ensure data directory exists
-        os.makedirs('data', exist_ok=True)
-        conn = sqlite3.connect(DB_ADDR)
+        conn = db_schema.create_connection()
         return conn
     except Error as e:
         print(f"Error connecting to database: {e}")
@@ -530,6 +529,12 @@ async def mystats(interaction: discord.Interaction):
         ''', (str(interaction.user.id), str(interaction.guild_id)))
         role_counts = c.fetchall()
         
+        role_counts_str = ''
+        if len(role_counts) == 0:
+            role_counts_str = 'No runs completed on any role'
+        else:
+            role_counts_str = map(lambda role_count: f'{role_count.role}: {role_count.count}', role_counts)
+        
         # Get average key level for this server
         c.execute('''
             SELECT AVG(r.key_level) 
@@ -538,14 +543,17 @@ async def mystats(interaction: discord.Interaction):
             WHERE p.user_id = ? AND p.server_id = ?
         ''', (str(interaction.user.id), str(interaction.guild_id)))
         avg_key = c.fetchone()[0]
-        
+
+        avg_key_str = 'N/A' if avg_key is None else f'{avg_key}'
+
         # Create stats embed
         embed = discord.Embed(
             title=f"M+ Statistics for {interaction.user.display_name}",
-            description=f"Server: {interaction.guild.name}",
+            description=f"Server: {interaction.guild.name}\nAvg. Key: {avg_key_str}\n{role_counts_str}",
             color=discord.Color.blue()
         )
-        
+
+        await interaction.channel.send(embed=embed)
         # ... rest of embed creation ...
 
     except Error as e:

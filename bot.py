@@ -46,8 +46,6 @@ dungeon_aliases = {
     "Nexus-Point Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint penas"],
     "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"]
 }
-
-# Convert to a more efficient structure using sets for O(1) lookup
 dungeon_lookup = {}
 for full_name, aliases in dungeon_aliases.items():
     for alias in aliases + [full_name.lower()]:
@@ -55,6 +53,21 @@ for full_name, aliases in dungeon_aliases.items():
 
 def translate_dungeon_name(user_input):
     return dungeon_lookup.get(user_input.lower())
+
+role_aliases = {
+    "Tank": ["tank", "t"],
+    "Healer": ["healer", "h", "heals", "heal"],
+    "DPS": ["dps", "damage", "dmg", "dpser", "d"]
+}
+role_lookup = {}
+for full_name, aliases in role_aliases.items():
+    for alias in aliases + [full_name.lower()]:
+        role_lookup[alias] = full_name
+
+def translate_role_name(user_input):
+    return role_lookup.get(user_input.lower())
+
+# Convert to a more efficient structure using sets for O(1) lookup
 
 # Define the roles for Tank, Healer, and DPS using emoji symbols
 role_emojis = {
@@ -139,7 +152,7 @@ async def update_group_embed(message, embed, group_state):
 @app_commands.describe(
     dungeon="Enter the dungeon name or abbreviation",
     key_level="Enter the key level (e.g., +10)",
-    role="Select your role in the group",
+    role="Select your role in the group: Tank, Healer, or DPS",
     schedule="When to run (e.g., 'now' or 'YYYY-MM-DD HH:MM' in server time)"
 )
 async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, role: str, schedule: str):
@@ -148,9 +161,17 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     
     # Validate dungeon name
     full_dungeon_name = translate_dungeon_name(dungeon)
+    # Validate role name
+    full_role_name = translate_role_name(role)
     if not full_dungeon_name:
         await interaction.response.send_message(
             f"Sorry, I couldn't recognize the dungeon name '{dungeon}'. Please try again with a valid name or abbreviation.",
+            ephemeral=True
+        )
+        return
+    if not full_role_name:
+        await interaction.response.send_message(
+            f"Sorry, I couldn't recognize the role '{role}'. Please try again with a valid name or abbreviation.",
             ephemeral=True
         )
         return
@@ -181,7 +202,7 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     await interaction.response.defer()
 
     # Initialize group state and create embed
-    group_state = GroupState(interaction, role, schedule_time)
+    group_state = GroupState(interaction, full_role_name, schedule_time)
     embed = discord.Embed(
         title=f"Dungeon: {full_dungeon_name}",
         description=f"Difficulty: {key_level}\nScheduled: {schedule_str}",

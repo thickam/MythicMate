@@ -553,7 +553,7 @@ async def mystats(interaction: discord.Interaction):
             color=discord.Color.blue()
         )
 
-        await interaction.channel.send(embed=embed)
+        await interaction.response.send_message(embed=embed)
 
     except Error as e:
         await interaction.response.send_message(f"Error retrieving statistics: {e}", ephemeral=True)

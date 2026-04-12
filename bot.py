@@ -41,9 +41,6 @@ def __queue_task(task: asyncio.Task):
     background_tasks.add(task)
     task.add_done_callback(background_tasks.discard)
 
-def __queue_coroutine(coroutine: asyncio._CoroutineLike):
-    __queue_task(asyncio.create_task(coroutine))
-
 # Define the available dungeons and their abbreviations
 # This dictionary maps full dungeon names to a list of their common abbreviations or shorthand names
 dungeon_aliases = {

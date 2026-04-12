@@ -8,6 +8,8 @@ import asyncio
 import pytz
 from sqlite3 import Error
 import db_schema
+import bot_emoji
+from models.role import Role
 
 # Load environment variables from .env file
 load_dotenv()
@@ -33,6 +35,14 @@ print(f"- Message Content: {intents.message_content}")
 
 # Initialize the bot with a command prefix and intents
 bot = commands.Bot(command_prefix='!', intents=intents)
+
+background_tasks = set()
+def __queue_task(task: asyncio.Task):
+    background_tasks.add(task)
+    task.add_done_callback(background_tasks.discard)
+
+def __queue_coroutine(coroutine: asyncio._CoroutineLike):
+    __queue_task(asyncio.create_task(coroutine))
 
 # Define the available dungeons and their abbreviations
 # This dictionary maps full dungeon names to a list of their common abbreviations or shorthand names
@@ -110,19 +120,19 @@ async def update_group_embed(message, embed, group_state):
         
         # Display main role assignments
         embed.add_field(
-            name="🛡️ Tank",
+            name=f"{bot_emoji.get_role_emoji(Role.tank, message.guild)} Tank",
             value=group_state.members["Tank"].mention if group_state.members["Tank"] else "None",
             inline=False
         )
         embed.add_field(
-            name="💚 Healer",
+            name=f"{bot_emoji.get_role_emoji(Role.healer, message.guild)} Healer",
             value=group_state.members["Healer"].mention if group_state.members["Healer"] else "None",
             inline=False
         )
         
         # Display DPS slots (filled or empty)
         dps_value = "\n".join([dps_user.mention for dps_user in group_state.members["DPS"]] + ["None"] * (3 - len(group_state.members["DPS"])))
-        embed.add_field(name="⚔️ DPS", value=dps_value, inline=False)
+        embed.add_field(name=f"{bot_emoji.get_role_emoji(Role.dps, message.guild)} DPS", value=dps_value, inline=False)
         
         # Display backup players for each role
         backup_text = ""
@@ -224,8 +234,19 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     await update_group_embed(group_message, embed, group_state)
 
     # Add role selection reactions
-    for emoji in role_emojis.values():
-        await group_message.add_reaction(emoji)
+    _task_first = None
+    _task_previous = None
+    for role in Role:
+        emoji = bot_emoji.get_role_emoji(role, interaction.guild)
+        _task = asyncio.create_task(group_message.add_reaction(emoji))
+        if _task_first is None:
+            _task_first = _task
+        if _task_previous is not None:
+            _task_previous.add_done_callback(lambda t: __queue_task(t))
+        _task_previous = _task
+    __queue_task(_task_first)
+    # for emoji in role_emojis.values():
+    #     await group_message.add_reaction(emoji)
 
     # Set up reminder if scheduled for later
     if schedule_time:
@@ -237,7 +258,7 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     print(f"Active groups after creation: {list(active_groups.keys())}")
 
 @bot.event
-async def on_reaction_add(reaction, user):
+async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     print(f"Reaction detected - Emoji: {reaction.emoji}, User: {user}, Message ID: {reaction.message.id}")
     if user == bot.user:
         print("Reaction was from bot, ignoring")
@@ -255,7 +276,8 @@ async def on_reaction_add(reaction, user):
     embed = group_info["embed"]
 
     # Handle role clearing
-    if str(reaction.emoji) == role_emojis["Clear Role"]:
+    reaction_role = bot_emoji.role_from_emoji(reaction.emoji, reaction.message.guild)
+    if reaction_role == Role.clear_role:
         role, promoted_user = group_state.remove_user(user)
         if promoted_user:
             await group_message.channel.send(
@@ -263,8 +285,9 @@ async def on_reaction_add(reaction, user):
                 delete_after=10
             )
         # Remove all role reactions from the user
-        for role_name, emoji in role_emojis.items():
-            if emoji != role_emojis["Clear Role"]:
+        for role in Role:
+            if role != Role.clear_role:
+                emoji = bot_emoji.get_role_emoji(role, reaction.message.guild)
                 await group_message.remove_reaction(emoji, user)
         await update_group_embed(group_message, embed, group_state)
         await group_message.remove_reaction(reaction.emoji, user)
@@ -279,12 +302,8 @@ async def on_reaction_add(reaction, user):
 
     # Handle role selection
     role_added = False
-    if str(reaction.emoji) == role_emojis["Tank"]:
-        role_added = group_state.add_member("Tank", user)
-    elif str(reaction.emoji) == role_emojis["Healer"]:
-        role_added = group_state.add_member("Healer", user)
-    elif str(reaction.emoji) == role_emojis["DPS"]:
-        role_added = group_state.add_member("DPS", user)
+    if(reaction_role != Role.clear_role):
+        role_added = group_state.add_member(reaction_role.value, user)
 
     # Notify user if added to backup
     if not role_added:

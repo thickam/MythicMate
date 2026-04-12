@@ -51,7 +51,7 @@ __emoji_cache: dict[int, dict[Role, None | discord.Emoji | discord.PartialEmoji 
 def get_role_emoji(role: Role, guild: discord.Guild):
     guild_id = guild.id
     
-    if(__emoji_cache.get(guild_id, __default_role_emoji) is None):
+    if(__emoji_cache.get(guild_id, __default_role_emoji).get(role) is None):
         role_emoji_dict = __guild_role_emoji_dict[guild_id]
         guild_specific_emoji = discord.utils.get(guild.emojis, name=role_emoji_dict[role])
         __emoji_cache[guild_id][role] = guild_specific_emoji or __default_role_emoji[role]

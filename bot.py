@@ -184,9 +184,15 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
         )
         return
     hours_mins_valid = in_hours.isdigit() and in_minutes.isdigit()
+    if not hours_mins_valid:
+        await interaction.response.send_message(
+            f"Sorry, inMinutes and inHours must both be numbers 0 or greater. Please try again with a valid time offset.",
+            ephemeral=True
+        )
+        return
     inHours = int(in_hours)
     inMinutes = int(in_minutes)
-    hours_mins_valid = hours_mins_valid and inHours >= 0 and inMinutes >= 0
+    hours_mins_valid = inHours >= 0 and inMinutes >= 0
     if not hours_mins_valid:
         await interaction.response.send_message(
             f"Sorry, inMinutes and inHours must both be numbers 0 or greater. Please try again with a valid time offset.",

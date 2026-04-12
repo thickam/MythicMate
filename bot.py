@@ -51,7 +51,8 @@ dungeon_aliases = {
     "Magisters' Terrace":["mt", "magisters terrace", "magister", "magisters"],
     "Maisara Caverns":["mc", "masiara", "cavern", "caverns", "maisara cavern", "trolls"],
     "Nexus-Point Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint penas"],
-    "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"]
+    "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"],
+    "Any": ["a", "any"]
 }
 dungeon_lookup = {}
 for full_name, aliases in dungeon_aliases.items():
@@ -73,16 +74,6 @@ for full_name, aliases in role_aliases.items():
 
 def translate_role_name(user_input):
     return role_lookup.get(user_input.lower())
-
-# Convert to a more efficient structure using sets for O(1) lookup
-
-# Define the roles for Tank, Healer, and DPS using emoji symbols
-role_emojis = {
-    "Tank": "🛡️",
-    "Healer": "💚",
-    "DPS": "⚔️",
-    "Clear Role": "❌"  # This emoji is used to allow users to clear their selected role
-}
 
 # Event handler for when the bot is ready and connected to Discord
 @bot.event
@@ -332,12 +323,13 @@ async def on_reaction_remove(reaction, user):
     group_message = group_info["message"]
     embed = group_info["embed"]
 
+    reaction_role = bot_emoji.role_from_emoji(reaction.emoji, reaction.message.guild)
     # Remove user from their role
-    if str(reaction.emoji) == role_emojis["Tank"] and group_state.members["Tank"] == user:
+    if reaction_role == Role.tank and group_state.members["Tank"] == user:
         group_state.members["Tank"] = None
-    elif str(reaction.emoji) == role_emojis["Healer"] and group_state.members["Healer"] == user:
+    elif reaction_role == Role.healer and group_state.members["Healer"] == user:
         group_state.members["Healer"] = None
-    elif str(reaction.emoji) == role_emojis["DPS"] and user in group_state.members["DPS"]:
+    elif reaction_role == Role.dps and user in group_state.members["DPS"]:
         group_state.members["DPS"].remove(user)
 
     await update_group_embed(group_message, embed, group_state)

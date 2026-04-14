@@ -1,6 +1,6 @@
 import asyncio
 from datetime import datetime, timezone
-from typing import Optional, overload
+from typing import Optional
 
 from discord import Forbidden, Interaction, Member, User
 
@@ -44,7 +44,7 @@ class DungeonGroup:
         
         # Add the command user to their selected role
         user = interaction.user
-        self.add_member(initial_role, user)
+        self.add_member(initial_role, user=user)
 
     def get_members_in_role(self, role: Role) -> list[str]:
         match role:
@@ -54,14 +54,12 @@ class DungeonGroup:
                 return self.__members.get(role)
             case _:
                 return []
-
-    @overload    
-    def get_members_in_backup(self) -> dict[Role, list[str]]:
-        return self.__backups
     
-    @overload    
-    def get_members_in_backup(self, role: Role) -> list[str]:
-        return self.__backups.get(role)
+    def get_members_in_backup(self, role: Optional[Role] = None):
+        if role is None:
+            return self.__backups
+        else:
+            return self.__backups.get(role)
             
     def get_tank(self) -> str:
         return self.__members.get(Role.tank)
@@ -72,46 +70,26 @@ class DungeonGroup:
     def get_dps(self) -> list[str]:
         return self.__members.get(Role.dps)
         
-    @overload
-    def add_member(self, role: Role, user: User | Member) -> bool:
-        """
-        Adds a user to a role, or to backup if role is full.
-        
-        Args:
-            role: The role to add the user to
-            user: The Discord user to add
-            
-        Returns:
-            bool: True if added to main role, False if added to backup
-        """
-
-        return self.add_member(role, user.id)
-
-    @overload
-    def add_member(self, role: Role, user_id: str) -> bool:
-        """
-        Adds a user to a role, or to backup if role is full.
-        
-        Args:
-            role: The role to add the user to
-            user: The ID of a Discord user to add
-            
-        Returns:
-            bool: True if added to main role, False if added to backup
-        """
-
+    def add_member(self, role: Role, user: Optional[User | Member] = None, user_id: Optional[str] = None):
+        _user_id: str = None
+        if user is not None:
+            _user_id = user.id
+        elif user_id is not None:
+            _user_id = user_id
+        else:
+            raise Exception("Need to pass one of user or user_id to DungeonGroup::__add_member")
         if self.has_room_for(role):
             match role:
                 case Role.tank | Role.healer:
-                    self.__members[role] = user_id
+                    self.__members[role] = _user_id
                 case Role.dps:
-                    self.__members[role].append(user_id)
+                    self.__members[role].append(_user_id)
                 case _:
                     print(f"Invalid member attempting to join group as {role.value}")
                     return False
             return True
         else:
-            self.__backups[role].append(user_id)
+            self.__backups[role].append(_user_id)
             return False
     
     def has_room_for(self, role: Role) -> bool:
@@ -160,7 +138,7 @@ class DungeonGroup:
             self.__remove_user_from_role(user_role, user_id = user.id)
             if self.__backups[user_role]:
                 user_to_promote = self.__backups[user_role].pop(0)
-                self.add_member(user_role, user_to_promote)
+                self.add_member(user_role, user_id=user_to_promote)
                 return user_role, user_to_promote
             return user_role, None
 
@@ -176,11 +154,11 @@ class DungeonGroup:
         """
         role = None
         is_backup = False
-        if self.__members[Role.tank] == user_id:
+        if self.get_tank() == user_id:
             role = Role.tank
-        elif self.__members[Role.healer] == user_id:
+        elif self.get_healer() == user_id:
             role = Role.healer
-        elif user_id in self.__members[Role.dps]:
+        elif user_id in self.get_dps():
             role = Role.dps
         
         # Check backups

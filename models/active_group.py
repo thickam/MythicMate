@@ -1,19 +1,18 @@
-from typing import Optional, overload
+from typing import Optional
 
-from discord import Embed, InteractionMessage, PartialMessage, Thread
+from discord import Client, Embed, InteractionMessage, PartialMessage, Thread
 from discord.abc import GuildChannel, PrivateChannel
-from discord.client import Bot
 
 from models.dungeon_group import DungeonGroup
 
 class ActiveGroup:
-    __client: Bot
+    __client: Client
     @classmethod
-    def set_client_instance(cls, client: Bot):
+    def set_client_instance(cls, client: Client):
         cls.__client = client
 
     @classmethod
-    def get_client_instance(cls) -> Bot:
+    def get_client_instance(cls) -> Client:
         return cls.__client
 
     __state: DungeonGroup
@@ -28,8 +27,8 @@ class ActiveGroup:
 
     def __init__(self, state: DungeonGroup, embed: Embed, message: InteractionMessage, dungeon: str, key_level: str):
         self.__state = state
-        self.setEmbed(embed)
-        self.set_message(message)
+        self.set_embed(embed=embed)
+        self.set_message(message=message)
         self.dungeon = dungeon
         self.key_level = key_level
 
@@ -44,18 +43,17 @@ class ActiveGroup:
             self.__hydrate_embed()
         return self.__embed
     
-    @overload
-    def set_embed(self, embed: Embed):
-        self.__embed_id = embed.url
-        self.__embed = embed
-
-    @overload
-    def setEmbed(self, embed_id: str, andHydrate: bool = False) -> Optional[Embed]:
-        self.__embed_id = embed_id
-        if andHydrate:
-            ActiveGroup.get_client_instance().fetch_channel()
-            return self.get_embed()
-        return None
+    def set_embed(self, embed: Optional[Embed] = None, embed_id: Optional[str] = None, and_hydrate: bool = False):
+        self.__embed = None
+        if embed is not None:
+            self.__embed_id = embed.url
+            self.__embed = embed
+        elif embed_id is not None:
+            self.__embed_id = embed_id
+            if and_hydrate:
+                ActiveGroup.get_client_instance().fetch_channel()
+                self.__hydrate_embed()
+        return self.__embed
     
     def get_message_id(self):
         return self.__message_id
@@ -65,23 +63,25 @@ class ActiveGroup:
             self.__hydrate_message()
         return self.__message
 
-    @overload
-    def set_message(self, message: InteractionMessage):
-        self.__message = message
-        self.__message_id = str(message.id)
-        self.__message_channel = message.channel
-        self.__message_channel_id = str(message.channel.id)
-
-    @overload
-    def set_message(self, message_id: str, channel_id: str, andHydrate: bool = False) -> Optional[InteractionMessage | PartialMessage]:
-        self.__message_id = message_id
-        self.__message_channel_id = channel_id
-        # Invalidate message & channel references that could technically be stale (channel should never go stale but idk)
+    def set_message(self, message: Optional[InteractionMessage] = None, message_id: Optional[str] = None, channel_id: Optional[str] = None, andHydrate: bool = False):
         self.__message = None
+        self.__message_id = None
         self.__message_channel = None
-        if andHydrate:
-            return self.get_message()
-        return None
+        self.__message_channel_id = None
+        if message is not None:
+            self.__message = message
+            self.__message_id = str(message.id)
+            self.__message_channel = message.channel
+            self.__message_channel_id = str(message.channel.id)
+        elif message_id is not None and channel_id is not None:
+            self.__message_id = message_id
+            self.__message_channel_id = channel_id
+            # Invalidate message & channel references that could technically be stale (channel should never go stale but idk)
+            self.__message = None
+            self.__message_channel = None
+            if andHydrate:
+                return self.get_message()
+        return self.__message
     
     def __hydrate_message(self):
         self.__message_channel = ActiveGroup.get_client_instance().get_channel(self.__message_channel_id)
@@ -89,4 +89,4 @@ class ActiveGroup:
 
     def __hydrate_embed(self):
         msg = self.get_message()
-        self.set_embed(msg.embeds[0])
+        self.__set_embed(embed=msg.embeds[0])

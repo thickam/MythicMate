@@ -1,5 +1,3 @@
-from typing import overload
-
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -86,11 +84,6 @@ async def on_ready():
 # Global dictionary to store active groups
 active_groups: dict[str, ActiveGroup] = {}
 
-@overload
-async def update_group_embed(active_group: ActiveGroup):
-    return update_group_embed(active_group.get_message(), active_group.get_embed(), active_group.get_state())
-
-@overload
 async def update_group_embed(message: discord.InteractionMessage, embed: discord.Embed, group_state: DungeonGroup):
     """
     Updates the embed message with current group composition and backup information.
@@ -104,54 +97,50 @@ async def update_group_embed(message: discord.InteractionMessage, embed: discord
         print("Missing required parameters for update_group_embed")
         return
         
+    embed.clear_fields()
+    
+    # Display main role assignments
+    embed.add_field(
+        name=f"{bot_emoji.get_role_emoji(Role.tank, message.guild)} Tank",
+        value=get_mention_str(group_state.get_tank()) if group_state.get_tank() else "None",
+        inline=False
+    )
+    embed.add_field(
+        name=f"{bot_emoji.get_role_emoji(Role.healer, message.guild)} Healer",
+        value=get_mention_str(group_state.get_healer()) if group_state.get_healer() else "None",
+        inline=False
+    )
+    
+    # Display DPS slots (filled or empty)
+    dps_value = "\n".join([get_mention_str(dps_user) for dps_user in group_state.get_dps()] + ["None"] * (3 - len(group_state.get_dps())))
+    embed.add_field(
+        name=f"{bot_emoji.get_role_emoji(Role.dps, message.guild)} DPS", 
+        value=dps_value, 
+        inline=False
+    )
+    
+    # Display backup players for each role
+    backup_text = ""
+    role: Role
+    backups: list[str]
+    for role, backups in group_state.get_members_in_backup().items():
+        if backups:
+            backup_text += f"\n**{role.value}**: " + ", ".join(get_mention_str(backup) for backup in backups)
+    
+    if backup_text:
+        embed.add_field(name="📋 Backups", value=backup_text.strip(), inline=False)
+
+    # Changed to use fetch_message and edit
     try:
-        embed.clear_fields()
-        
-        # Display main role assignments
-        embed.add_field(
-            name=f"{bot_emoji.get_role_emoji(Role.tank, message.guild)} Tank",
-            value=get_mention_str(group_state.get_tank()) if group_state.get_tank() else "None",
-            inline=False
-        )
-        embed.add_field(
-            name=f"{bot_emoji.get_role_emoji(Role.healer, message.guild)} Healer",
-            value=get_mention_str(group_state.get_healer()) if group_state.members["Healer"] else "None",
-            inline=False
-        )
-        
-        # Display DPS slots (filled or empty)
-        dps_value = "\n".join([get_mention_str(dps_user) for dps_user in group_state.get_dps()] + ["None"] * (3 - len(group_state.get_dps())))
-        embed.add_field(
-            name=f"{bot_emoji.get_role_emoji(Role.dps, message.guild)} DPS", 
-            value=dps_value, 
-            inline=False
-        )
-        
-        # Display backup players for each role
-        backup_text = ""
-        role: Role
-        backups: list[str]
-        for role, backups in group_state.get_members_in_backup():
-            if backups:
-                backup_text += f"\n**{role.value}**: " + ", ".join(get_mention_str(backup) for backup in backups)
-        
-        if backup_text:
-            embed.add_field(name="📋 Backups", value=backup_text.strip(), inline=False)
-
-        # Changed to use fetch_message and edit
-        try:
-            # Fetch a fresh message object before editing
-            current_message = await message.channel.fetch_message(message.id)
-            await current_message.edit(embed=embed)
-        except discord.NotFound:
-            print("Message not found - it may have been deleted")
-        except discord.Forbidden:
-            print("Bot doesn't have permission to edit the message")
-        except Exception as e:
-            print(f"Error updating message: {e}")
-
+        # Fetch a fresh message object before editing
+        current_message = await message.channel.fetch_message(message.id)
+        await current_message.edit(embed=embed)
+    except discord.NotFound:
+        print("Message not found - it may have been deleted")
+    except discord.Forbidden:
+        print("Bot doesn't have permission to edit the message")
     except Exception as e:
-        print(f"Error in update_group_embed: {e}")
+        print(f"Error updating message: {e}")
 
 @bot.tree.command(name="lfm", description="Start looking for members for a Mythic+ run.")
 @app_commands.describe(
@@ -170,6 +159,7 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     full_dungeon_name = dungeon_aliases.normalize(dungeon)
     # Validate role name
     full_role_name = role_aliases.normalize(role)
+    typed_role = Role[full_role_name.lower()]
     if not full_dungeon_name:
         await interaction.response.send_message(
             f"Sorry, I couldn't recognize the dungeon name '{dungeon}'. Please try again with a valid name or abbreviation.",
@@ -205,7 +195,7 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
         schedule_str = "now"
 
     # Initialize group state and create embed
-    group_state = DungeonGroup(interaction, full_role_name, schedule_time)
+    group_state = DungeonGroup(interaction, typed_role, schedule_time)
     embed = discord.Embed(
         title=f"Dungeon: {full_dungeon_name}",
         description=f"Difficulty: {key_level}\nScheduled: {schedule_str}",
@@ -260,6 +250,12 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         print(f"No group found for message ID {reaction.message.id}")
         print(f"Active groups: {list(active_groups.keys())}")
         return
+    
+    reaction_role = bot_emoji.role_from_emoji(reaction.emoji, reaction.message.guild)
+    # If the reaction isn't related to a role, remove it (this is dependent on bot messages being ignored FIRST)
+    if reaction_role is None:
+        reaction.remove(user)
+        return
 
     print(f"Found group info for message {reaction.message.id}")
     group_state = group_info.get_state()
@@ -267,8 +263,11 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     embed = group_info.get_embed()
 
     # Handle role clearing
-    reaction_role = bot_emoji.role_from_emoji(reaction.emoji, reaction.message.guild)
     if reaction_role == Role.clear_role:
+        _role, _ = group_state.get_user_role(user.id)
+        if _role is None:
+            await group_message.remove_reaction(reaction.emoji, user)
+            return
         role, promoted_user = group_state.remove_user(user)
         if promoted_user:
             await group_message.channel.send(
@@ -285,7 +284,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         return
 
     # Prevent users from selecting multiple roles
-    current_role = group_state.get_user_role(user)
+    current_role, is_backup = group_state.get_user_role(user.id)
     if current_role:
         await group_message.remove_reaction(reaction.emoji, user)
         await user.send("You can only select one role. Please remove your current role first.")
@@ -294,7 +293,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     # Handle role selection
     role_added = False
     if(reaction_role != Role.clear_role):
-        role_added = group_state.add_member(reaction_role.value, user)
+        role_added = group_state.add_member(reaction_role, user=user)
 
     # Notify user if added to backup
     if not role_added:
@@ -327,7 +326,7 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
     # Remove user from their role
     group_state.remove_user(user)
 
-    await update_group_embed(group_info)
+    await update_group_embed(group_info.get_message(), group_info.get_embed(), group_info.get_state())
 
 @bot.event
 async def on_message(message: discord.Message):

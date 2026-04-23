@@ -271,7 +271,7 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         role, promoted_user = group_state.remove_user(user)
         if promoted_user:
             await group_message.channel.send(
-                f"{get_mention_str(promoted_user)} has been promoted from backup to {role}!",
+                f"{get_mention_str(promoted_user)} has been promoted from backup to {role.value}!",
                 delete_after=10
             )
         # Remove all role reactions from the user

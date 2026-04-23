@@ -15,22 +15,19 @@ class ActiveGroup:
     def get_client_instance(cls) -> Client:
         return cls.__client
 
-    __state: DungeonGroup
-    __embed_id: str
-    __embed: Optional[Embed]
-    __message_channel: Optional[GuildChannel | PrivateChannel | Thread]
-    __message_channel_id: str
-    __message_id: str
-    __message: Optional[InteractionMessage]
-    dungeon: str
-    key_level: str
-
     def __init__(self, state: DungeonGroup, embed: Embed, message: InteractionMessage, dungeon: str, key_level: str):
-        self.__state = state
+        self.__embed_id: str
+        self.__embed: Embed | None
+        self.__message_channel: GuildChannel | PrivateChannel | Thread | None
+        self.__message_channel_id: str
+        self.__message_id: str
+        self.__message: Optional[InteractionMessage]
+
+        self.__state: DungeonGroup = state
         self.set_embed(embed=embed)
         self.set_message(message=message)
-        self.dungeon = dungeon
-        self.key_level = key_level
+        self.dungeon: str = dungeon
+        self.key_level: str = key_level
 
     def get_state(self) -> DungeonGroup:
         return self.__state

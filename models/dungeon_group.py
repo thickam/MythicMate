@@ -17,20 +17,6 @@ class DungeonGroup:
         reminder_task: Optional asyncio task for scheduled groups
     """
 
-    __members: dict[Role, str | list[str] | None] = {
-        Role.tank: None,
-        Role.healer: None,
-        Role.dps: []
-    }
-
-    __backups: dict[Role, list[str]] = {
-        Role.tank: [],
-        Role.healer: [],
-        Role.dps: []
-    }
-    reminder_task: Optional[asyncio.Task] = None
-    schedule_time: Optional[datetime]
-
     def __init__(self, interaction: Interaction, initial_role: Role, schedule_time:Optional[datetime]=None):
         """
         Initializes a new group state.
@@ -40,7 +26,19 @@ class DungeonGroup:
             initial_role: Starting role of the group creator
             schedule_time: Optional datetime for scheduled groups
         """
+        self.__members: dict[Role, str | list[str] | None] = {
+            Role.tank: None,
+            Role.healer: None,
+            Role.dps: []
+        }
+
+        self.__backups: dict[Role, list[str]] = {
+            Role.tank: [],
+            Role.healer: [],
+            Role.dps: []
+        }
         self.schedule_time = schedule_time
+        self.reminder_task: Optional[asyncio.Task] = None
         
         # Add the command user to their selected role
         user = interaction.user
@@ -141,6 +139,7 @@ class DungeonGroup:
                 self.add_member(user_role, user_id=user_to_promote)
                 return user_role, user_to_promote
             return user_role, None
+        return None, None
 
     def get_user_role(self, user_id: str) -> tuple[Role, bool]:
         """

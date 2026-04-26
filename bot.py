@@ -12,6 +12,7 @@ import bot_emoji
 from models.active_group import ActiveGroup
 from models.aliased_list import AliasedList
 from models.dungeon_group import DungeonGroup
+from models.lfg_lobby import LfgLobby
 from models.role import Role
 from bot_utils import get_mention_str
 
@@ -83,6 +84,7 @@ async def on_ready():
 
 # Global dictionary to store active groups
 active_groups: dict[str, ActiveGroup] = {}
+lfg_lobby: LfgLobby = LfgLobby()
 
 async def update_group_embed(message: discord.InteractionMessage, embed: discord.Embed, group_state: DungeonGroup):
     """
@@ -243,6 +245,17 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
 
     print(f"Created group message with ID: {group_message.id}")
     print(f"Active groups after creation: {list(active_groups.keys())}")
+
+@bot.tree.command(name="lfg", description="Join a lobby to let others know you're available.")
+@app_commands.describe(
+    key_level_range="Enter the key level or level-range you are interested in (e.g., 10 or 2-5)",
+    role="Select your roles by entering any combination of ""t"" (tank), ""h"" (healer), and/or ""d"" (dps) (e.g., th)",
+    for_hours="Hour(s) you are interested in joining a group, RELATIVE TO START (added to in_hours)",
+    in_hours="Hour(s) until you are interested in joining a group"
+)
+async def lfg(interaction: discord.Interaction, key_level_range: str, role: str, for_hours: str = '0', in_hours: str = '0'):
+    
+    pass
 
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):

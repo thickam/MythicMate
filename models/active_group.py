@@ -3,7 +3,7 @@ from typing import Optional
 from discord import Client, Embed, InteractionMessage, PartialMessage, Thread
 from discord.abc import GuildChannel, PrivateChannel
 
-from models.dungeon_group import DungeonGroup
+from models.single_role_dungeon_group import SingleRoleDungeonGroup
 
 class ActiveGroup:
     __client: Client
@@ -15,7 +15,7 @@ class ActiveGroup:
     def get_client_instance(cls) -> Client:
         return cls.__client
 
-    def __init__(self, state: DungeonGroup, embed: Embed, message: InteractionMessage, dungeon: str, key_level: str):
+    def __init__(self, state: SingleRoleDungeonGroup, embed: Embed, message: InteractionMessage, dungeon: str, key_level: str):
         self.__embed_id: str
         self.__embed: Embed | None
         self.__message_channel: GuildChannel | PrivateChannel | Thread | None
@@ -23,13 +23,13 @@ class ActiveGroup:
         self.__message_id: str
         self.__message: Optional[InteractionMessage]
 
-        self.__state: DungeonGroup = state
+        self.__state: SingleRoleDungeonGroup = state
         self.set_embed(embed=embed)
         self.set_message(message=message)
         self.dungeon: str = dungeon
         self.key_level: str = key_level
 
-    def get_state(self) -> DungeonGroup:
+    def get_state(self) -> SingleRoleDungeonGroup:
         return self.__state
 
     def get_embed_id(self) -> str:

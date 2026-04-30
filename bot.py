@@ -11,7 +11,8 @@ import db_schema
 import bot_emoji
 from models.active_group import ActiveGroup
 from models.aliased_list import AliasedList
-from models.single_role_dungeon_group import SingleRoleDungeonGroup
+from models.dungeon_group import DungeonGroup
+from models.multi_role_dungeon_group import MultiRoleDungeonGroup
 from models.role import Role
 from bot_utils import get_mention_str
 
@@ -143,7 +144,7 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
         schedule_str = "now"
 
     # Initialize group state and create embed
-    group_state = SingleRoleDungeonGroup(interaction, typed_role, schedule_time)
+    group_state = MultiRoleDungeonGroup(interaction, typed_role, schedule_time)
     embed = discord.Embed(
         title=f"Dungeon: {full_dungeon_name}",
         description=f"Difficulty: {key_level}\nScheduled: {schedule_str}",
@@ -216,10 +217,10 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
         if not _role:
             await group_message.remove_reaction(reaction.emoji, user)
             return
-        role, promoted_user = group_state.remove_user(user)
+        _role, promoted_user = group_state.remove_user(user)
         if promoted_user:
             await group_message.channel.send(
-                f"{get_mention_str(promoted_user)} has been promoted from backup to {role.value}!",
+                f"{get_mention_str(promoted_user)} has been promoted from backup to {_role.value}!",
                 delete_after=10
             )
         # Remove all role reactions from the user
@@ -234,11 +235,11 @@ async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
     # Handle role selection
     role_added = False
     if(reaction_role != Role.clear_role):
-        role_added = group_state.add_member(reaction_role, user=user)
+        role_added = group_state.add_member([reaction_role], user=user)
 
     # Notify user if added to backup
-    if not role_added:
-        await user.send("You've been added to the backup list for this role.")
+    # if not role_added:
+        # await user.send("You've been added to the backup list for this role.")
 
     await group_state.update_group_embed(group_message, embed)
 
@@ -262,7 +263,7 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
     if not group_info:
         return
 
-    group_state: SingleRoleDungeonGroup = group_info.get_state()
+    group_state: DungeonGroup = group_info.get_state()
 
     # Remove user from their role
     group_state.remove_user(user)

@@ -2,7 +2,6 @@ from abc import ABC, abstractmethod
 from typing import Optional
 
 from discord import Embed, InteractionMessage, Member, User
-from discord.interactions import InteractionChannel
 
 from models.role import Role
 
@@ -16,7 +15,7 @@ class DungeonGroup(ABC):
         pass
 
     @abstractmethod
-    def add_member(self, role: Role, user: Optional[User | Member] = None, user_id: Optional[str] = None):
+    def add_member(self, role: list[Role], user: Optional[User | Member] = None, user_id: Optional[str] = None):
         pass
 
     @abstractmethod
@@ -28,7 +27,7 @@ class DungeonGroup(ABC):
         pass
 
     @abstractmethod
-    def send_reminder(self, channel: InteractionChannel | None):
+    def send_reminder(self, channel):
         pass
 
     @property

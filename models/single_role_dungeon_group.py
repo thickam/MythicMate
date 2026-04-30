@@ -3,7 +3,7 @@ from datetime import datetime, timezone
 from typing import Optional
 
 from discord import Embed, Forbidden, Interaction, InteractionMessage, Member, User
-from discord.interactions import InteractionChannel
+import discord
 
 import bot_emoji
 from bot_utils import get_mention_str
@@ -42,18 +42,12 @@ class SingleRoleDungeonGroup(DungeonGroup):
             Role.dps: []
         }
 
-        self.__flex: dict[Role, list[str]] = {
-            Role.tank: [],
-            Role.healer: [],
-            Role.dps: []
-        }
-
         self.schedule_time = schedule_time
         self.reminder_task: Optional[asyncio.Task] = None
         
         # Add the command user to their selected role
         user = interaction.user
-        self.add_member(initial_role, user=user)
+        self.add_member([initial_role], user=user)
     
     def get_members_in_backup(self, role: Optional[Role] = None):
         if role is None:
@@ -70,7 +64,10 @@ class SingleRoleDungeonGroup(DungeonGroup):
     def get_dps(self) -> list[str]:
         return self.__members.get(Role.dps)
         
-    def add_member(self, role: Role, user: Optional[User | Member] = None, user_id: Optional[str] = None):
+    def add_member(self, role: list[Role], user: Optional[User | Member] = None, user_id: Optional[str] = None):
+        if len(role != 1):
+            raise Exception("Incorrect number of roles, buddy")
+        _role = role[0]
         _user_id: str = None
         if user is not None:
             _user_id = user.id
@@ -78,18 +75,18 @@ class SingleRoleDungeonGroup(DungeonGroup):
             _user_id = user_id
         else:
             raise Exception("Need to pass one of user or user_id to DungeonGroup::__add_member")
-        if self.has_room_for(role):
-            match role:
+        if self.has_room_for(_role):
+            match _role:
                 case Role.tank | Role.healer:
-                    self.__members[role] = _user_id
+                    self.__members[_role] = _user_id
                 case Role.dps:
-                    self.__members[role].append(_user_id)
+                    self.__members[_role].append(_user_id)
                 case _:
-                    print(f"Invalid member attempting to join group as {role.value}")
+                    print(f"Invalid member attempting to join group as {_role.value}")
                     return False
             return True
         else:
-            self.__backups[role].append(_user_id)
+            self.__backups[_role].append(_user_id)
             return False
     
     def has_room_for(self, role: Role) -> bool:
@@ -138,7 +135,7 @@ class SingleRoleDungeonGroup(DungeonGroup):
             self.__remove_user_from_role(user_role, user_id = user.id)
             if self.__backups[user_role]:
                 user_to_promote = self.__backups[user_role].pop(0)
-                self.add_member(user_role, user_id=user_to_promote)
+                self.add_member([user_role], user_id=user_to_promote)
                 return user_role, user_to_promote
             return user_role, None
         return None, None
@@ -182,7 +179,7 @@ class SingleRoleDungeonGroup(DungeonGroup):
             len(self.__members[Role.dps]) == 3
         )
 
-    async def send_reminder(self, channel: InteractionChannel | None):
+    async def send_reminder(self, channel):
         """
         Sends reminders to group members before scheduled start time.
         
@@ -251,3 +248,14 @@ class SingleRoleDungeonGroup(DungeonGroup):
             value=dps_value, 
             inline=False
         )
+        # Changed to use fetch_message and edit
+        try:
+            # Fetch a fresh message object before editing
+            current_message = await message.channel.fetch_message(message.id)
+            await current_message.edit(embed=embed)
+        except discord.NotFound:
+            print("Message not found - it may have been deleted")
+        except discord.Forbidden:
+            print("Bot doesn't have permission to edit the message")
+        except Exception as e:
+            print(f"Error updating message: {e}")

@@ -21,13 +21,31 @@ class MultiRoleDungeonGroup(DungeonGroup):
         self.add_member([initial_role], user=interaction.user)
 
     def is_complete(self) -> bool:
-        # This is going to be rough -_-
+        tank_users = {user_id for user_id, roles in self.__members.items() if Role.tank in roles}
+        healer_users = {user_id for user_id, roles in self.__members.items() if Role.healer in roles}
+        dps_users = {user_id for user_id, roles in self.__members.items() if Role.dps in roles}
+        return self._has_valid_assignment(tank_users, healer_users, dps_users)
+
+    @staticmethod
+    def _has_valid_assignment(tank_user_ids: set[str], healer_user_ids: set[str], dps_user_ids: set[str]) -> bool:
+        if not tank_user_ids or not healer_user_ids or len(dps_user_ids) < 3:
+            return False
+
+        for tank_id in tank_user_ids:
+            for healer_id in healer_user_ids:
+                if tank_id == healer_id:
+                    continue
+                available_dps = dps_user_ids - {tank_id, healer_id}
+                if len(available_dps) >= 3:
+                    print(f"Valid assignment found: Tank {tank_id}, Healer {healer_id}, DPS {available_dps}")
+                    return True
         return False
 
     def __get_member_str(self, role_emoji_dict: dict[Role, Emoji | PartialEmoji | str | None]) -> str :
         individual_member_strings = []
         for user_id, roles in self.__members.items():
-            individual_str = f"{get_mention_str(user_id)} -  {" ".join(list(map(lambda role: str(role_emoji_dict[role]), roles)))}"
+            emoji_list = " ".join(str(role_emoji_dict[role]) for role in roles)
+            individual_str = f"{get_mention_str(user_id)} - {emoji_list}"
             individual_member_strings.append(individual_str)
         return "\n".join(individual_member_strings) if individual_member_strings else "Nobody yet..."
 

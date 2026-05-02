@@ -23,6 +23,10 @@ class DungeonGroup(ABC):
         pass
 
     @abstractmethod
+    def remove_user_from_role(self, user: User | Member, role: Role) -> tuple[Optional[Role], Optional[str]]:
+        pass
+
+    @abstractmethod
     def get_user_role(self, user_id: str) -> tuple[Role, bool]:
         pass
 

@@ -92,6 +92,13 @@ class MultiRoleDungeonGroup(DungeonGroup):
         else:
             self.__members[_user_id] = set(roles)
 
+    def remove_user_from_role(self, user, role):
+        if user.id in self.__members:
+            roles = self.__members.get(user.id)
+            roles.discard(role)
+            if len(roles) == 0:
+                self.remove_user(user)
+
     def remove_user(self, user: User | Member) -> tuple[Optional[Role], Optional[str]]:
         self.__members.pop(user.id, None)
         return None, None

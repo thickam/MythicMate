@@ -258,6 +258,10 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
     """
     if user == bot.user:
         return
+    
+    reaction_role = bot_emoji.role_from_emoji(reaction.emoji, reaction.message.guild)
+    if not reaction_role or reaction_role == Role.clear_role:
+        return
 
     group_info = active_groups.get(reaction.message.id)
     if not group_info:
@@ -266,7 +270,7 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
     group_state: DungeonGroup = group_info.get_state()
 
     # Remove user from their role
-    group_state.remove_user(user)
+    group_state.remove_user_from_role(user, reaction_role)
 
     await group_state.update_group_embed(group_info.get_message(), group_info.get_embed())
 

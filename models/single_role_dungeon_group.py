@@ -112,6 +112,10 @@ class SingleRoleDungeonGroup(DungeonGroup):
             self.__members[role].remove(_user_id)
         else:
             raise Exception(f"Attempted to remove user from invalid role: {role.name} ({role.value})")
+        
+    def remove_user_from_role(self, user: User | Member, role: Role) -> tuple[Optional[Role], Optional[str]]:
+        self.remove_user(user)
+
 
     def remove_user(self, user: User | Member) -> tuple[Optional[Role], Optional[str]]:
         """

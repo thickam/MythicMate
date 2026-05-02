@@ -1,16 +1,23 @@
 import asyncio
 from typing import Callable
 
+import discord
+from discord.state import Channel
+
 from models.lfg_user import LfgUser
 from models.role import Role
 
 class LfgLobby:
-    def __init__(self):
+    def __init__(self, bot: discord.Client, channel_id: int):
         self.__active_user_lock = asyncio.Lock()
         self.__scheduled_user_lock = asyncio.Lock()
         self.__active_users: list[LfgUser] = []
         self.__scheduled_users: list[LfgUser] = []
-        self.__task_list = []
+        self.__task_list: list[asyncio.Task] = []
+        self.__message_update_task: asyncio.Task | None = None
+        self.__message_id = int
+        self.__bot_ref = bot
+        self.__channel_id = channel_id
 
     @classmethod
     def __parse_hours_str(cls, hours: str) -> int | None:
@@ -31,9 +38,34 @@ class LfgLobby:
     async def __is_scheduled_user(self, user_id: str):
         async with self.__scheduled_user_lock:
             return self.__user_in_list(user_id, self.__scheduled_users)
+        
+    async def __move_user_async(self, user: LfgUser, in_hours: int):
+        asyncio.sleep(max(in_hours * 3600, 5))
+        async with self.__scheduled_user_lock:
+            if user in self.__scheduled_users:
+                self.__scheduled_users.remove(user)
+        async with self.__active_user_lock:
+            self.__active_users.append(user)
+        self.update_lfg_message()
 
-    def unschedule_user(self, user_id: str):
-        pass
+    async def __schedule_user(self, user: LfgUser, in_hours: int):
+        async with self.__scheduled_user_lock:
+            self.__scheduled_users.append(user)
+        task = asyncio.create_task(self.__move_user_async(user, in_hours), user.get_user_id())
+        self.__task_list.append(task)
+
+    async def unschedule_user(self, user_id: str):
+        for task in self.__task_list:
+            if task.get_name() == user_id:
+                task.cancel()
+                break
+            
+        async with self.__scheduled_user_lock:
+            user_to_unschedule = None
+            for user in self.__scheduled_users:
+                user_to_unschedule = user if user.has_id(user_id) else None
+            if user_to_unschedule:
+                self.__scheduled_users.remove(user)
 
     def __determine_roles(role_str: str) -> list[Role]:
         result = []
@@ -48,6 +80,18 @@ class LfgLobby:
                 case _:
                     print(f"Invalid role selection: '{role_character}'")
         return result
+    
+    async def __remove_inactive_user(self, user_id: str, in_hours: int):
+        asyncio.sleep(max(3600 * in_hours), 5)
+        async with self.__scheduled_user_lock:
+            user_index = -1
+            for user, index in self.__scheduled_users:
+                if user.has_id(user_id):
+                    user_index = index
+                    break
+            if user_index > -1:
+                self.__scheduled_users.pop(user_index)
+        self.update_lfg_message()
 
     def add_user(self, user_id: str, key_level_range: str, role_str: str, for_hours: str, in_hours: str | None):
         # if already active or scheduled, remove them
@@ -62,15 +106,46 @@ class LfgLobby:
         parsed_in_hours = self.__parse_hours_str(in_hours)
         parsed_for_hours = self.__parse_hours_str(for_hours)
 
+        calculated_for_hours = for_hours
         if parsed_in_hours:
-            self.__scheduled_users.append(new_user)
+            self.__schedule_user(new_user, parsed_in_hours)
+            # Need to add in_hours to for_hours so it removes them in for_hours AFTER they start (in in_hours hours)
+            calculated_for_hours = calculated_for_hours + in_hours
         else:
             self.__active_users.append(new_user)
+            self.update_lfg_message()
 
         if parsed_for_hours:
-            pass
-
+            asyncio.create_task(self.__remove_inactive_user(user_id, calculated_for_hours))
         
     def remove_active_user(self, user_id: str):
         self.__active_users = [user for user in self.__active_users if not user.has_id(user_id)]
-        
+        self.update_lfg_message()
+
+    def __create_lfg_embed(self, bot: discord.Client, file: discord.File | None) -> discord.Embed:
+        embed = discord.Embed(
+            title=f"M+ Lobby",
+            color=discord.Color.green()
+        )
+
+        embed.set_author(name=bot.user.display_name, icon_url=f"attachment://{file.filename}" if file else None)
+        return embed
+
+    async def __update_lfg_message(self, bot: discord.Client, channel: Channel):
+        async with self.__active_user_lock.acquire():
+            old_message = channel.get_partial_message(self.__message_id)
+            await old_message.delete()
+            file = None
+            try:
+                file = discord.File("./resources/BnetLfgEye.PNG", filename="BnetLfgEye.png")
+            except:
+                pass
+            lfg_embed = self.__create_lfg_embed(bot, file)
+            message = await channel.send(embed=lfg_embed, silent=True, file=file)
+            self.__message_id = message.id
+            
+    async def update_lfg_message(self):
+        if self.__message_update_task and not self.__message_update_task.cancelled() and not self.__message_update_task.cancelling():
+            self.__message_update_task.cancel()
+        channel = self.__bot_ref.get_channel(self.__channel_id)
+        self.__message_update_task = asyncio.create_task(self.__update_lfg_message(self.__bot_ref, channel))

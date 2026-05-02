@@ -43,6 +43,8 @@ print(f"- Message Content: {intents.message_content}")
 bot = commands.Bot(command_prefix='!', intents=intents)
 ActiveGroup.set_client_instance(bot)
 
+lfg_lobbies: dict[int, LfgLobby] = {}
+
 background_tasks = set()
 def __queue_task(task: asyncio.Task):
     background_tasks.add(task)
@@ -84,7 +86,6 @@ async def on_ready():
 
 # Global dictionary to store active groups
 active_groups: dict[str, ActiveGroup] = {}
-lfg_lobby: LfgLobby = LfgLobby()
 
 async def update_group_embed(message: discord.InteractionMessage, embed: discord.Embed, group_state: DungeonGroup):
     """
@@ -210,7 +211,6 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
         color=discord.Color.blue()
     )
     embed.set_author(name=interaction.user.display_name, icon_url=interaction.user.avatar.url)
-    embed.set_thumbnail(url="https://example.com/path/to/your/image.png")
 
     # Create and store group message - Changed to use channel.send instead of interaction.followup
     callback = await interaction.response.send_message(embed=embed)
@@ -254,8 +254,13 @@ async def lfm(interaction: discord.Interaction, dungeon: str, key_level: str, ro
     in_hours="Hour(s) until you are interested in joining a group"
 )
 async def lfg(interaction: discord.Interaction, key_level_range: str, role: str, for_hours: str = '0', in_hours: str = '0'):
-    
-    pass
+    channel_id = interaction.channel.id
+    lobby = lfg_lobbies.get(channel_id, None)
+    if not lobby:
+        lobby = LfgLobby()
+        lfg_lobbies[channel_id] = lobby
+    lobby.add_user(interaction.user.id, key_level_range, role, for_hours, in_hours)
+    lobby.update_lfg_message(bot, interaction.channel)
 
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
@@ -351,6 +356,9 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
 async def on_message(message: discord.Message):
     print(f"Message received: {message.content[:20]}...")
     await bot.process_commands(message)
+    lfg_lobby = lfg_lobbies.get(message.channel.id, None)
+    if lfg_lobby:
+        lfg_lobby.update_lfg_message(bot, message.channel)
 
 # Run the bot with the token loaded from the environment variables
 bot.run(TOKEN)

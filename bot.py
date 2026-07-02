@@ -1,3 +1,5 @@
+import traceback
+
 import discord
 from discord.ext import commands
 from discord import app_commands
@@ -257,10 +259,15 @@ async def lfg(interaction: discord.Interaction, key_level_range: str, role: str,
     channel_id = interaction.channel.id
     lobby = lfg_lobbies.get(channel_id, None)
     if not lobby:
-        lobby = LfgLobby()
+        lobby = LfgLobby(bot, channel_id)
         lfg_lobbies[channel_id] = lobby
-    lobby.add_user(interaction.user.id, key_level_range, role, for_hours, in_hours)
-    lobby.update_lfg_message(bot, interaction.channel)
+    await interaction.response.defer(ephemeral=False, thinking=False)
+    await lobby.add_user(interaction.user.id, key_level_range, role, for_hours, in_hours)
+    await lobby.update_lfg_message()
+    try:
+        await interaction.delete_original_response()
+    except Error as e:
+        traceback.print_exception(e)
 
 @bot.event
 async def on_reaction_add(reaction: discord.Reaction, user: discord.User):
@@ -352,13 +359,24 @@ async def on_reaction_remove(reaction: discord.Reaction, user: discord.Member | 
 
     await update_group_embed(group_info.get_message(), group_info.get_embed(), group_info.get_state())
 
+async def handle_new_message_lfg(message: discord.Message):
+    if message.author.id == bot.user.id:
+        return
+    lfg_lobby = lfg_lobbies.get(message.channel.id, None)
+    if lfg_lobby:
+        await lfg_lobby.update_lfg_message()
+
 @bot.event
 async def on_message(message: discord.Message):
     print(f"Message received: {message.content[:20]}...")
-    await bot.process_commands(message)
-    lfg_lobby = lfg_lobbies.get(message.channel.id, None)
-    if lfg_lobby:
-        lfg_lobby.update_lfg_message(bot, message.channel)
+    current_step = "PROCESS_COMMANDS"
+    try:
+        await bot.process_commands(message)
+        current_step = "HANDLE_NEW_MESSAGE_LFG"
+        await handle_new_message_lfg(message)
+    except:
+        print(f"Failure during: '{current_step}'")
+        print(f"For Message: '{message}'")
 
 # Run the bot with the token loaded from the environment variables
 bot.run(TOKEN)

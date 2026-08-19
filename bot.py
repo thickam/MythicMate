@@ -50,14 +50,14 @@ def __queue_task(task: asyncio.Task):
 # Define the available dungeons and their abbreviations
 # This dictionary maps full dungeon names to a list of their common abbreviations or shorthand names
 dungeon_aliases = AliasedList({
-    "Pit of Saron":["pos", "pit", "saron"],
-    "Skyreach":["sky", "sr", "s"],
-    "Seat of the Triumvirate":["seat", "sot"],
-    "Algeth'ar Academy":["aa", "algethar", "academy", "algethar academy"],
-    "Magisters' Terrace":["mt", "magisters terrace", "magister", "magisters"],
-    "Maisara Caverns":["mc", "masiara", "cavern", "caverns", "maisara cavern", "trolls"],
-    "Nexus-Point Xenas":["npx", "nexus point", "nexus-point", "xenas", "xexus-noint penas"],
-    "Windrunner Spire":["wrs", "spire", "windrunner", "wind runner", "wind runner spire"],
+    "Altar of Fangs":["altar", "fangs", "aof", "alter", "alter of fangs"],
+    "Den of Nalorakk":["den", "den of nalorak", "don", "dn"],
+    "Murder Row":["mr", "row", "murder"],
+    "The Blinding Vale":["vale", "blinding vale", "tbv", "bv"],
+    "Voidscar Arena":["arena", "voidscar", "va"],
+    "Kings' Rest":["kr", "kings rest", "king's rest", "rest", "kings"],
+    "Ruby Life Pools":["rlp", "pools", "ruby", "ruby life"],
+    "Temple of Sethraliss":["temple", "temple of sethralis", "tos"],
     "Any": ["a", "any"]
 })
 
